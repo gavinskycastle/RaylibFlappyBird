@@ -6,7 +6,6 @@ This is a port of my Pygame recreation of Flappy Bird to the the [python binding
 
 - Bird rotation not implemented
 - Large and small score rendering is bugged
-- Secret window icon not updating
 - Bird hitbox is too large/small?
 
 Original copyright belongs to .GEARS Studios. I will accept any request by the original publisher to delete this repository.
