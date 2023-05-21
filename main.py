@@ -14,6 +14,7 @@ from assets import *
 # Setting up the window
 screenw, screenh = 288, 512
 fps = 60
+debug_mode = False
 pr.init_window(screenw, screenh, "Flappy Bird")
 pr.set_target_fps(fps)
 pr.set_window_icon(icon)
@@ -21,14 +22,19 @@ pr.set_window_icon(icon)
 # TODO: add rotation
 loaded_textures = {}
 def blit(image, coords, rotation=0):
-    global loaded_textures
+    global loaded_textures, debug_mode
     if image in loaded_textures:
         texture = loaded_textures[image]
     else:
-        texture = pr.load_texture_from_image(image)
-        loaded_textures.update({image: texture})
+        try:
+            texture = pr.load_texture_from_image(image)
+            loaded_textures.update({image: texture})
+        except TypeError:
+            texture = image
     
     pr.draw_texture(texture, int(coords[0]), int(coords[1]), pr.WHITE)
+    if debug_mode:
+        pr.draw_text(str(texture.id), int(coords[0])-20, int(coords[1]), 20, pr.GREEN)
     
     return pr.Rectangle(coords[0], coords[1], image.width, image.height)
 
@@ -163,24 +169,34 @@ def create_new_pipe(): # A function that adds a new set of pipes to the pipe lis
     [screenw+pipe_horizontal_spacing, bottom_pipe_position], 
     [screenw+pipe_horizontal_spacing, bottom_pipe_position-320-pipe_vertical_spacing]])
 
+previous_score_surface = None
+previous_score_args = None
 def score_text_surface(spritesheet, score, regular_width, one_width, height): # A function that inputs a number, a spritesheet, and various other values, and outputs a surface to be rendered to the screen
-    score_digits = [int(digit) for digit in str(score)]
-    score_surface = pr.gen_image_color(len(score_digits)*regular_width, height, pr.Color(0, 0, 0, 0))
-    
-    score_blit_x = 0
-    
-    for digit in score_digits:
-        digit_image = spritesheet[digit]
-        pr.image_draw(score_surface, digit_image, pr.Rectangle(score_blit_x, 0, digit_image.width, digit_image.height), pr.Rectangle(0, 0, score_surface.width, score_surface.height), pr.WHITE)
-        if digit == 1:
-            score_blit_x += one_width
-        else:
-            score_blit_x += regular_width
-    
-    # Cropping the score surface so it can be properly centered
-    pr.image_alpha_crop(score_surface, 0)
-     
-    return score_surface
+    global previous_score_surface, previous_score_args
+    score_args = (spritesheet, score, regular_width, one_width, height)
+    if score_args == previous_score_args:
+        return previous_score_surface
+    else:
+        score_digits = [int(digit) for digit in str(score)]
+        score_surface = pr.gen_image_color(len(score_digits)*regular_width, height, pr.Color(0, 0, 0, 0))
+        
+        score_blit_x = 0
+        
+        for digit in score_digits:
+            digit_image = spritesheet[digit]
+            pr.image_draw(score_surface, digit_image, pr.Rectangle(score_blit_x, 0, digit_image.width, digit_image.height), pr.Rectangle(0, 0, score_surface.width, score_surface.height), pr.WHITE)
+            if digit == 1:
+                score_blit_x += one_width
+            else:
+                score_blit_x += regular_width
+        
+        # Cropping the score surface so it can be properly centered
+        pr.image_alpha_crop(score_surface, 0)
+        
+        previous_score_surface = score_surface
+        previous_score_args = score_args
+        
+        return score_surface
 
 try:
     with open(path.join("save", "highscore"), "r") as file:
@@ -198,12 +214,13 @@ play_button = Button(screenw/2-52, 300, play_button_image)
 
 # Everything below this point should be reset when a new attempt is made
 def start_game():
-    global main_bird, ground_x, death_fill_opacity, play_fill_opacity, updates_since_launch, background, pipe_image, pipe_image_flipped, pipes, play_fade, first_input
+    global main_bird, ground_x, death_fill_opacity, play_fill_opacity, updates_since_launch, background, pipe_image, pipe_image_flipped, pipes, play_fade, first_input, fill_surface
     main_bird = Bird(70, screenh/2-12, [bird_yellow, bird_red, bird_blue]) # Creating the main bird, setting its starting position, and passing in it's selectable textures
 
     ground_x = 0
 
     death_fill_opacity = 255
+    fill_surface = pr.gen_image_color(screenw, screenh, pr.Color(255, 255, 255, death_fill_opacity))
 
     play_fade = True
     first_input = False
@@ -308,9 +325,8 @@ while not pr.window_should_close():
         if main_bird.updates_since_death == fps*(6/4):
             small_score = 0
         small_score += 1
-        if small_score > main_bird.score:
-            small_score = main_bird.score
-        small_score_surface = score_text_surface(small_score_text, small_score, 16, 12, 20)
+        if (small_score <= main_bird.score) or (small_score == 1 and main_bird.score == 0):
+            small_score_surface = score_text_surface(small_score_text, small_score, 16, 12, 20)
         blit(small_score_surface, (screenw/2+91-small_score_surface.width, 209))
         # Rendering the small high score text
         small_high_score_surface = score_text_surface(small_score_text, high_score, 16, 12, 20)
@@ -328,16 +344,28 @@ while not pr.window_should_close():
             blit(medals_spritesheet[3], (screenw/2-87, 217))
         play_button.update(reset_game)
     
-    if main_bird.dead: # Fading out the screen white when the player dies
-        fill_surface = pr.gen_image_color(screenw, screenh, pr.Color(255, 255, 255, death_fill_opacity))
+    previous_fill_surface_white = fill_surface
+    if main_bird.dead and not death_fill_opacity == 0: # Fading out the screen white when the player dies
+        fill_surface = pr.load_texture_from_image(pr.gen_image_color(screenw, screenh, pr.Color(255, 255, 255, death_fill_opacity)))
+        try:
+            pr.unload_texture(previous_fill_surface_white)
+        except:
+            pass
         blit(fill_surface, (0, 0))
+        previous_fill_surface_white = fill_surface
         death_fill_opacity -= 16
         if death_fill_opacity < 0:
             death_fill_opacity = 0
 
+    previous_fill_surface_black = fill_surface
     if play_fade: # Fading in and out the screen black when the game is played
-        fill_surface = pr.gen_image_color(screenw, screenh, pr.Color(0, 0, 0, play_fill_opacity))
+        fill_surface = pr.load_texture_from_image(pr.gen_image_color(screenw, screenh, pr.Color(0, 0, 0, play_fill_opacity)))
+        try:
+            pr.unload_texture(previous_fill_surface_black)
+        except:
+            pass
         blit(fill_surface, (0, 0))
+        previous_fill_surface_black = fill_surface
         if play_fade_up:
             play_fill_opacity += 8
         else:
