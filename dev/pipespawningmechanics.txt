@@ -1,0 +1,9 @@
+The game doesn't spawn pipes for the first second or so.
+
+Every frame, the game checks the X position of every pipe,
+and if there are no pipes, or none of the pipes's x positions + width exceed the screen width,
+a new pipe is created at the X position screen width + a defined amount of space between pipes.
+
+This new pipe's Y position is set as the Y position of the pipe farthest to the right, plus or minus a random amount.
+If there are no existing pipes, it's set to a random amount such that neither the top or bottom pipe goes offscreen,
+and the top part of the pipe is fully visible.
