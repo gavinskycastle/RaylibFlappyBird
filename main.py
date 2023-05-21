@@ -33,10 +33,18 @@ def blit(image, coords, rotation=0):
             texture = image
     
     pr.draw_texture(texture, int(coords[0]), int(coords[1]), pr.WHITE)
-    if debug_mode:
-        pr.draw_text(str(texture.id), int(coords[0])-20, int(coords[1]), 20, pr.GREEN)
+    rectangle = pr.Rectangle(coords[0], coords[1], image.width, image.height)
     
-    return pr.Rectangle(coords[0], coords[1], image.width, image.height)
+    if debug_mode and collidepoint((pr.get_mouse_x(), pr.get_mouse_y()), rectangle):
+        text_y = int(coords[1])
+        if text_y < 0:
+            text_y = 0
+        pr.draw_text("ID: "+str(texture.id), int(coords[0])-40, text_y, 20, pr.GREEN)
+        pr.draw_text("X: "+str(int(coords[0])), int(coords[0])-40, text_y+20, 20, pr.GREEN)
+        pr.draw_text("Y: "+str(int(coords[1])), int(coords[0])-40, text_y+40, 20, pr.GREEN)
+        pr.draw_rectangle_lines(int(coords[0]), int(coords[1]), image.width, image.height, pr.GREEN)
+    
+    return rectangle
 
 def collidelist(rect, rect_list):
     for l_rect in rect_list:
@@ -69,7 +77,7 @@ class Bird:
         pr.play_sound(wing_sound)
         
     def update(self): # Checking for player input, updating the rect, and drawing the image accordingly
-        global first_input
+        global first_input, debug_mode
 
         # Moving the wing up and down
         if updates_since_launch % 4 == 0 and not self.gravity == 5: # This will be activated every 4 frames, or 15 times a second
@@ -137,6 +145,8 @@ class Bird:
             pr.play_sound(die_sound)
         
         blit(blitted_image, (self.x, self.y), rotation=rotation_amount) # Drawing the image to the screen
+        if debug_mode:
+            pr.draw_rectangle_lines(int(bird_rect.x), int(bird_rect.y), int(bird_rect.width), int(bird_rect.height), pr.RED)
 
 # Class for interactive menu buttons
 class Button: 
@@ -378,6 +388,10 @@ while not pr.window_should_close():
             play_fill_opacity = 0
             play_fade = False
             play_fade_up = True
+    
+    if debug_mode:
+        pr.draw_fps(10, screenh-30)
+        pr.draw_text("rl "+str(pr.rl_get_version()), screenw-50, screenh-30, 20, pr.DARKGREEN)
     
     updates_since_launch += 1
     
