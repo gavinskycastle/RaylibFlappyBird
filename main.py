@@ -22,14 +22,11 @@ pr.set_window_icon(icon)
 loaded_textures = {}
 def blit(image, coords, rotation=0):
     global loaded_textures
-    if image is pr.Texture:
-        image = texture
+    if image in loaded_textures:
+        texture = loaded_textures[image]
     else:
-        if image in loaded_textures:
-            texture = loaded_textures[image]
-        else:
-            texture = pr.load_texture_from_image(image)
-            loaded_textures.update({image: texture})
+        texture = pr.load_texture_from_image(image)
+        loaded_textures.update({image: texture})
     
     pr.draw_texture(texture, int(coords[0]), int(coords[1]), pr.WHITE)
     
@@ -42,10 +39,7 @@ def collidelist(rect, rect_list):
     return -1
 
 def collidepoint(point, rect):
-    try:
-        point_vector = pr.Vector2(point[0], point[1])
-    except TypeError:
-        return False
+    point_vector = pr.Vector2(int(point[0]), int(point[1]))
     return pr.check_collision_point_rec(point_vector, rect)
 
 # Class for the bird that the player controls
@@ -151,7 +145,7 @@ class Button:
         self.rect = blit(self.texture, (self.x, self.blit_y))
 
         # Moves button slightly down when pressed, and launches function when released
-        if collidepoint((pr.get_mouse_x, pr.get_mouse_y), self.rect):
+        if collidepoint((pr.get_mouse_x(), pr.get_mouse_y()), self.rect):
             if pr.is_mouse_button_down(pr.MouseButton.MOUSE_BUTTON_LEFT):
                 self.pressed = True
                 self.blit_y = self.y + 2
@@ -243,6 +237,7 @@ def update_high_score():
 # Main loop
 while not pr.window_should_close():
     pr.begin_drawing()
+    
     # Event detection
     if pr.is_key_pressed(pr.KeyboardKey.KEY_SPACE) or pr.is_key_pressed(pr.KeyboardKey.KEY_UP): # Making the player jump when the space bar or up arrow key is pressed, if they aren't dead
         if not main_bird.dead:
