@@ -1,6 +1,6 @@
 # RaylibFlappyBird
 
-This is a port of my Pygame recreation of Flappy Bird to the the [python bindings for the Raylib graphics library,](https://github.com/electronstudio/raylib-python-cffi) originally written in C.
+This is a port of my Pygame recreation of Flappy Bird to the the [python bindings for the Raylib graphics library,](https://github.com/electronstudio/raylib-python-cffi)
 
 ## Current bugs
 
